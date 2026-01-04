@@ -53,72 +53,72 @@ export function SubmissionsOverview() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
 
   useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+
+      const { data: storesData } = await supabase.from('stores').select('*');
+      setStores(storesData || []);
+
+      const { data: profilesData } = await supabase.from('profiles').select('*');
+      const profilesMap: Record<string, Profile> = {};
+      (profilesData || []).forEach(p => {
+        profilesMap[p.id] = p;
+      });
+      setProfiles(profilesMap);
+
+      const allSubmissions: Submission[] = [];
+      const modulesToFetch = moduleFilter === 'all'
+        ? Object.keys(MODULE_CONFIG) as ModuleType[]
+        : [moduleFilter];
+
+      let dateCondition = '';
+      const now = new Date();
+      if (dateFilter === 'today') {
+        dateCondition = now.toISOString().split('T')[0];
+      } else if (dateFilter === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        dateCondition = weekAgo.toISOString();
+      } else if (dateFilter === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        dateCondition = monthAgo.toISOString();
+      }
+
+      for (const module of modulesToFetch) {
+        const config = MODULE_CONFIG[module];
+        let query = supabase.from(config.table).select('*').order('created_at', { ascending: false });
+
+        if (dateFilter === 'today') {
+          query = query.gte('created_at', `${dateCondition}T00:00:00`).lt('created_at', `${dateCondition}T23:59:59`);
+        } else if (dateFilter !== 'all') {
+          query = query.gte('created_at', dateCondition);
+        }
+
+        const { data } = await query.limit(100);
+
+        if (data) {
+          data.forEach(item => {
+            allSubmissions.push({
+              id: item.id,
+              module,
+              store_id: item.store_id,
+              submitted_by: item.submitted_by,
+              created_at: item.created_at,
+              type: item.action_type || item.report_type,
+              severity: item.severity,
+              description: item.description,
+              status: item.status
+            });
+          });
+        }
+      }
+
+      allSubmissions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setSubmissions(allSubmissions);
+      setLoading(false);
+    };
+
     fetchData();
   }, [moduleFilter, dateFilter]);
-
-  const fetchData = async () => {
-    setLoading(true);
-
-    const { data: storesData } = await supabase.from('stores').select('*');
-    setStores(storesData || []);
-
-    const { data: profilesData } = await supabase.from('profiles').select('*');
-    const profilesMap: Record<string, Profile> = {};
-    (profilesData || []).forEach(p => {
-      profilesMap[p.id] = p;
-    });
-    setProfiles(profilesMap);
-
-    const allSubmissions: Submission[] = [];
-    const modulesToFetch = moduleFilter === 'all'
-      ? Object.keys(MODULE_CONFIG) as ModuleType[]
-      : [moduleFilter];
-
-    let dateCondition = '';
-    const now = new Date();
-    if (dateFilter === 'today') {
-      dateCondition = now.toISOString().split('T')[0];
-    } else if (dateFilter === 'week') {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      dateCondition = weekAgo.toISOString();
-    } else if (dateFilter === 'month') {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      dateCondition = monthAgo.toISOString();
-    }
-
-    for (const module of modulesToFetch) {
-      const config = MODULE_CONFIG[module];
-      let query = supabase.from(config.table).select('*').order('created_at', { ascending: false });
-
-      if (dateFilter === 'today') {
-        query = query.gte('created_at', `${dateCondition}T00:00:00`).lt('created_at', `${dateCondition}T23:59:59`);
-      } else if (dateFilter !== 'all') {
-        query = query.gte('created_at', dateCondition);
-      }
-
-      const { data } = await query.limit(100);
-
-      if (data) {
-        data.forEach(item => {
-          allSubmissions.push({
-            id: item.id,
-            module,
-            store_id: item.store_id,
-            submitted_by: item.submitted_by,
-            created_at: item.created_at,
-            type: item.action_type || item.report_type,
-            severity: item.severity,
-            description: item.description,
-            status: item.status
-          });
-        });
-      }
-    }
-
-    allSubmissions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    setSubmissions(allSubmissions);
-    setLoading(false);
-  };
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesStore = storeFilter === 'all' || sub.store_id === storeFilter;

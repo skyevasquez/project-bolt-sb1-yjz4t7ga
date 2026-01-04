@@ -1,5 +1,3 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
-
 const RESEND_API_KEY = 're_BZ3kRrKp_CArB8wgdZUQUxRz98xBn78Z5';
 
 const corsHeaders = {
@@ -27,11 +25,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     const payload: NotificationPayload = await req.json();
 
     const emailSubject = getEmailSubject(payload);
