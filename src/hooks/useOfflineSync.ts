@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   getOfflineQueue,
@@ -11,10 +11,12 @@ export function useOfflineSync() {
   const isOnline = useOnlineStatus();
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
 
   const syncQueue = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
+    if (!isOnline || isSyncingRef.current) return;
 
+    isSyncingRef.current = true;
     setIsSyncing(true);
     try {
       const queue = await getOfflineQueue();
@@ -33,9 +35,10 @@ export function useOfflineSync() {
         }
       }
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing]);
+  }, [isOnline]);
 
   useEffect(() => {
     if (isOnline) {
