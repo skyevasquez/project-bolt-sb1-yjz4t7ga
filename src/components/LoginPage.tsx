@@ -52,7 +52,7 @@ export function LoginPage() {
           </h2>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-100 dark:bg-red-900 border-3 border-red-500 dark:border-red-700 flex items-start gap-3">
+            <div role="alert" className="mb-6 p-4 bg-red-100 dark:bg-red-900 border-3 border-red-500 dark:border-red-700 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-300 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700 dark:text-red-200 font-medium">{error}</p>
             </div>
@@ -61,8 +61,9 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div>
-                <label className="block text-sm font-bold mb-2">Full Name</label>
+                <label htmlFor="fullName" className="block text-sm font-bold mb-2">Full Name</label>
                 <input
+                  id="fullName"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -74,8 +75,9 @@ export function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-bold mb-2">Email</label>
+              <label htmlFor="email" className="block text-sm font-bold mb-2">Email</label>
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -86,8 +88,9 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-2">Password</label>
+              <label htmlFor="password" className="block text-sm font-bold mb-2">Password</label>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -104,7 +107,10 @@ export function LoginPage() {
               className="btn-brutal-primary w-full flex items-center justify-center gap-2"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="sr-only">Loading...</span>
+                </>
               ) : isSignUp ? (
                 <>
                   <UserPlus className="w-5 h-5" />
