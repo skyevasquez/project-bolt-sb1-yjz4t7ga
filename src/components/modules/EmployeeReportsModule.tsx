@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useStore } from '../../context/StoreContext';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
@@ -28,12 +28,10 @@ import {
   Printer,
   ChevronDown,
   Calendar,
-  User,
   MessageSquare,
   X,
   Edit3,
   CheckCircle,
-  XCircle,
   AlertCircle
 } from 'lucide-react';
 
@@ -63,7 +61,6 @@ const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string }> = {
 export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
   const { profile, isRSM, isAdmin } = useAuth();
   const { selectedStore } = useStore();
-  const { isOnline } = useOfflineSync();
   const canManageReports = isRSM || isAdmin;
 
   const [viewMode, setViewMode] = useState<ViewMode>(canManageReports ? 'list' : 'my-documents');
@@ -102,7 +99,7 @@ export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
     setLoading(false);
   };
 
-  const fetchFollowUps = async (reportId: string) => {
+  const fetchFollowUps = useCallback(async (reportId: string) => {
     const { data } = await supabase
       .from('report_follow_ups')
       .select('*')
@@ -110,15 +107,15 @@ export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
       .order('created_at', { ascending: true });
 
     if (data) setFollowUps(data);
-  };
+  }, []);
 
-  const handleViewReport = (report: EmployeeReport) => {
+  const handleViewReport = useCallback((report: EmployeeReport) => {
     setSelectedReport(report);
     fetchFollowUps(report.id);
     setViewMode('detail');
-  };
+  }, [fetchFollowUps]);
 
-  const filteredReports = reports.filter((report) => {
+  const filteredReports = useMemo(() => reports.filter((report) => {
     if (searchTerm && !report.employee_name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
@@ -126,7 +123,7 @@ export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
     if (filterStatus && report.status !== filterStatus) return false;
     if (filterSeverity && report.severity !== filterSeverity) return false;
     return true;
-  });
+  }), [reports, searchTerm, filterType, filterStatus, filterSeverity]);
 
   const pendingAcknowledgments = reports.filter(r => r.status === 'pending_acknowledgment').length;
   const overdueFollowUps = reports.filter(r =>
@@ -323,7 +320,7 @@ export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
             <ReportCard
               key={report.id}
               report={report}
-              onClick={() => handleViewReport(report)}
+              onClick={handleViewReport}
             />
           ))
         )}
@@ -332,7 +329,12 @@ export function EmployeeReportsModule({ onBack }: EmployeeReportsModuleProps) {
   );
 }
 
-function ReportCard({ report, onClick }: { report: EmployeeReport; onClick: () => void }) {
+interface ReportCardProps {
+  report: EmployeeReport;
+  onClick: (report: EmployeeReport) => void;
+}
+
+const ReportCard = memo(function ReportCard({ report, onClick }: ReportCardProps) {
   const config = REPORT_TYPE_CONFIG[report.report_type];
   const statusConfig = STATUS_CONFIG[report.status];
   const Icon = config.icon;
@@ -341,7 +343,7 @@ function ReportCard({ report, onClick }: { report: EmployeeReport; onClick: () =
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => onClick(report)}
       className="card-brutal p-4 w-full text-left hover:shadow-brutal-hover hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"
     >
       <div className="flex items-start gap-4">
@@ -393,7 +395,7 @@ function ReportCard({ report, onClick }: { report: EmployeeReport; onClick: () =
       </div>
     </button>
   );
-}
+});
 
 function ReportCreationForm({ onBack, onSuccess }: { onBack: () => void; onSuccess: () => void }) {
   const { profile } = useAuth();
